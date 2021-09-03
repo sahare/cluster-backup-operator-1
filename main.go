@@ -120,6 +120,10 @@ func main() {
 		setupLog.Error(err, "unable to create Restore controller")
 		os.Exit(1)
 	}
+	if err = (&backupv1beta1.BackupSchedule{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create BackupSchedule webhook")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
