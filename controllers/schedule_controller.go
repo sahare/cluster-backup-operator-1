@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/discovery"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -59,7 +60,8 @@ const (
 // BackupScheduleReconciler reconciles a BackupSchedule object
 type BackupScheduleReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	DiscoveryClient discovery.DiscoveryInterface
+	Scheme          *runtime.Scheme
 }
 
 //+kubebuilder:rbac:groups=cluster.open-cluster-management.io,resources=backupschedules,verbs=get;list;watch;create;update;patch;delete
@@ -173,6 +175,8 @@ func (r *BackupScheduleReconciler) Reconcile(
 			updateStatusFailedMsg,
 		)
 	}
+
+	getBackupResources(ctx, r.DiscoveryClient)
 
 	// retrieve the velero schedules (if any)
 	veleroScheduleList := veleroapi.ScheduleList{}

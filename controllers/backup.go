@@ -30,6 +30,7 @@ import (
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -151,6 +152,60 @@ func deleteBackup(
 	} else {
 		backupLogger.Info(fmt.Sprintf("DeleteBackupRequest already exists, skip request creation %s", backupName))
 	}
+}
+
+// get server resources that needs backup
+func getBackupResources(
+	ctx context.Context,
+	dc discovery.DiscoveryInterface,
+) ([]string, error) {
+	backupLogger := log.FromContext(ctx)
+
+	backupGroupVersions := []string{}
+	backupResourceNames := []string{}
+
+	groupList, err := dc.ServerGroups()
+	if err != nil {
+		return backupResourceNames, fmt.Errorf("failed to get server groups: %v", err)
+	}
+	if groupList != nil {
+		for _, group := range groupList.Groups {
+			if needsBackup(group.Name) {
+				for _, version := range group.Versions {
+					backupGroupVersions = append(backupGroupVersions, version.GroupVersion)
+				}
+			}
+		}
+	}
+
+	// m := make(map[string][]string)
+
+	for _, groupVersion := range backupGroupVersions {
+		resourceList, err := dc.ServerResourcesForGroupVersion(groupVersion)
+		if err != nil {
+			return backupResourceNames, fmt.Errorf("failed to get server resources: %v", err)
+		}
+		if resourceList != nil {
+			for _, resource := range resourceList.APIResources {
+				if resource.SingularName != "" {
+					// m[groupVersion] = append(m[groupVersion], resource.SingularName)
+					backupResourceNames = append(backupResourceNames, resource.SingularName)
+				}
+			}
+		}
+	}
+
+	// backupLogger.Info("INFO", "GroupResourceMap", m)
+	backupLogger.Info("INFO", "BackupResourceNames", backupResourceNames)
+	return backupResourceNames, nil
+}
+
+func needsBackup(groupStr string) bool {
+	if groupStr == "hive.openshift.io" || groupStr == "hiveinternal.openshift.io" ||
+		strings.Contains(groupStr, "open-cluster-management.io") {
+		return true
+	}
+	return false
 }
 
 // set all acm resources backup info
