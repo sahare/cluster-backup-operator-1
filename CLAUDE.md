@@ -37,7 +37,7 @@ make docker-build IMG=<registry>/<image>:<tag>
 
 > Tests use `controller-runtime`'s envtest harness. `testbin/` is populated automatically on first `make test`.
 >
-> ⚠️ **Go version compatibility:** This repo targets Go 1.16. The pinned `controller-gen` version is incompatible with Go 1.24+. Running `make generate` or `make test` on a newer Go install will fail. Either use Go 1.16–1.23, or update `go.mod` and the `controller-gen` version pin in the Makefile first.
+> **Go version:** This repo uses Go 1.25+. On `release-2.11`, controller-gen v0.4.1 crashes with Go 1.24+ — skip `make manifests` on that branch and test with `make build && make vet && make test` instead.
 
 ---
 
